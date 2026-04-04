@@ -57,6 +57,73 @@ async function startServer() {
     }
   });
 
+  // API Route for URL Redirect Unrolling
+  app.post("/api/resolve-url", async (req, res) => {
+    const { url } = req.body;
+    let currentUrl = url;
+    const redirectChain = [url];
+    let redirectCount = 0;
+    const maxRedirects = 5;
+
+    try {
+      while (redirectCount < maxRedirects) {
+        const response = await axios.get(currentUrl, {
+          maxRedirects: 0,
+          validateStatus: (status) => status >= 200 && status < 400,
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+          }
+        });
+
+        if (response.status >= 300 && response.status < 400 && response.headers.location) {
+          const nextUrl = new URL(response.headers.location, currentUrl).href;
+          currentUrl = nextUrl;
+          redirectChain.push(currentUrl);
+          redirectCount++;
+        } else {
+          break;
+        }
+      }
+
+      // Check the final URL against Safe Browsing
+      const apiKey = process.env.GOOGLE_SAFE_BROWSING_API_KEY;
+      let isSafe = true;
+      let threatType = null;
+
+      if (apiKey) {
+        const payload = {
+          client: { clientId: "clearalert", clientVersion: "1.0" },
+          threatInfo: {
+            threatTypes: ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE", "POTENTIALLY_HARMFUL_APPLICATION"],
+            platformTypes: ["ANY_PLATFORM"],
+            threatEntryTypes: ["URL"],
+            threatEntries: [{ url: currentUrl }]
+          }
+        };
+        const sbResponse = await axios.post(
+          `https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${apiKey}`,
+          payload
+        );
+        if (sbResponse.data.matches) {
+          isSafe = false;
+          threatType = sbResponse.data.matches[0].threatType;
+        }
+      }
+
+      return res.json({
+        originalUrl: url,
+        finalUrl: currentUrl,
+        redirectCount,
+        redirectChain,
+        isSafe,
+        threatType
+      });
+    } catch (error) {
+      console.error("URL Resolution Error:", error);
+      return res.status(500).json({ error: "Failed to resolve URL" });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

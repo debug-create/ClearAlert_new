@@ -118,6 +118,15 @@ export const PATTERNS: Pattern[] = [
   }
 ];
 
+export function detectForwarded(text: string): boolean {
+  const forwardTriggers = [
+    "Forwarded", "forwarded many times", "Fwd:", "↩ Forwarded",
+    "अग्रेषित", "प्रेषित", "FW:", "Fwd:"
+  ];
+  const textLower = text.toLowerCase();
+  return forwardTriggers.some(trigger => textLower.includes(trigger.toLowerCase()));
+}
+
 export function findPatternMatch(text: string) {
   const textLower = text.toLowerCase();
   let bestMatch: Pattern | null = null;

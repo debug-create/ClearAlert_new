@@ -15,7 +15,18 @@
 
 @layer base {
   body {
-    @apply bg-bg text-white font-sans antialiased;
+    @apply bg-bg text-white font-sans antialiased relative overflow-x-hidden;
+    font-variant-numeric: tabular-nums;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    opacity: 0.02;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
   }
   
   /* Indian script support */
@@ -23,6 +34,35 @@
   [lang="bn"] { font-family: "Noto Sans Bengali", sans-serif; }
   [lang="ta"] { font-family: "Noto Sans Tamil", sans-serif; }
   [lang="te"] { font-family: "Noto Sans Telugu", sans-serif; }
+}
+
+@keyframes wave {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(-25%); }
+  100% { transform: translateX(0); }
+}
+
+.animate-wave {
+  animation: wave 10s linear infinite;
+}
+
+.animate-wave-fast {
+  animation: wave 4s linear infinite;
+}
+
+.glass {
+  @apply backdrop-blur-[24px] bg-white/[0.03] border border-white/[0.08];
+}
+
+.cursor-glow {
+  position: fixed;
+  width: 240px;
+  height: 240px;
+  background: radial-gradient(circle, rgba(192, 57, 43, 0.06) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  mix-blend-mode: screen;
 }
 
 @keyframes shake {
