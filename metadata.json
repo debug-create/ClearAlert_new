@@ -1,0 +1,5 @@
+{
+  "name": "ClearAlert",
+  "description": "India's AI-powered scam detection tool. Paste messages, upload screenshots, or check URLs to identify scams in seconds.",
+  "requestFramePermissions": []
+}

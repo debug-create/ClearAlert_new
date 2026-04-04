@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-syne: "Syne", sans-serif;
+  --font-mono: "Space Mono", monospace;
+  --color-bg: #0A0A0A;
+  --color-accent-red: #C0392B;
+  --color-accent-gold: #F0C040;
+  --color-safe: #1E8449;
+  --color-suspicious: #B7950B;
+  --color-high-risk: #A93226;
+  --color-critical: #C0392B;
+}
+
+@layer base {
+  body {
+    @apply bg-bg text-white font-sans antialiased;
+  }
+  
+  /* Indian script support */
+  [lang="hi"], [lang="mr"] { font-family: "Noto Sans Devanagari", sans-serif; }
+  [lang="bn"] { font-family: "Noto Sans Bengali", sans-serif; }
+  [lang="ta"] { font-family: "Noto Sans Tamil", sans-serif; }
+  [lang="te"] { font-family: "Noto Sans Telugu", sans-serif; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.animate-shake {
+  animation: shake 0.2s ease-in-out infinite;
+}
