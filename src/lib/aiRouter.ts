@@ -8,6 +8,7 @@ export interface AnalysisResult {
   scam_type: string;
   confidence: number;
   red_flags: string[];
+  tactics_used: string[];
   action_checklist: string[];
   explanation: string;
 }
@@ -32,6 +33,7 @@ export async function hybridAnalyze(text: string, localSignals: any): Promise<An
         "scam_type": "string",
         "confidence": number (0-100),
         "red_flags": ["string"],
+        "tactics_used": ["string"],
         "action_checklist": ["string"],
         "explanation": "string (plain English, clear and concise)"
       }
@@ -56,6 +58,7 @@ export async function hybridAnalyze(text: string, localSignals: any): Promise<An
     let scam_type = "Unknown";
     let confidence = localSignals.intent.combined;
     const red_flags: string[] = [];
+    const tactics_used: string[] = [];
     const action_checklist: string[] = ["Do not share OTP", "Do not click links", "Report to 1930"];
 
     if (localSignals.semantic.matched) {
@@ -63,24 +66,34 @@ export async function hybridAnalyze(text: string, localSignals: any): Promise<An
       scam_type = localSignals.semantic.scamType;
       confidence = Math.max(confidence, Math.round(localSignals.semantic.similarity * 100));
       red_flags.push("Matches known scam patterns");
+      tactics_used.push("Pattern Matching");
     }
 
     if (localSignals.intent.combined > 70) {
       risk_level = risk_level === "HIGH_RISK" ? "CRITICAL" : "HIGH_RISK";
       red_flags.push("High psychological pressure detected");
+      tactics_used.push("Psychological Pressure");
     } else if (localSignals.intent.combined > 40) {
       risk_level = risk_level === "SAFE" ? "SUSPICIOUS" : risk_level;
       red_flags.push("Suspicious intent detected");
+      tactics_used.push("Suspicious Intent");
     }
 
-    if (localSignals.intent.urgencyScore > 60) red_flags.push("Artificial urgency detected");
-    if (localSignals.intent.financialScore > 60) red_flags.push("Financial pressure detected");
+    if (localSignals.intent.urgencyScore > 60) {
+      red_flags.push("Artificial urgency detected");
+      tactics_used.push("Urgency");
+    }
+    if (localSignals.intent.financialScore > 60) {
+      red_flags.push("Financial pressure detected");
+      tactics_used.push("Financial Pressure");
+    }
 
     return {
       risk_level,
       scam_type: localSignals.semantic.matched ? localSignals.semantic.scamType : "Potential Fraud",
       confidence,
       red_flags: red_flags.length > 0 ? red_flags : ["Unusual message structure"],
+      tactics_used: tactics_used.length > 0 ? tactics_used : ["Unknown tactics"],
       action_checklist,
       explanation: "Our local AI has detected patterns commonly associated with scams. Exercise extreme caution."
     };

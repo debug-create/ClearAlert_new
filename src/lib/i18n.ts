@@ -34,7 +34,12 @@ export const translations = {
     aiEnglishNote: "AI response in English — select language above for UI",
     patternOnly: "Pattern-only analysis · AI unavailable",
     whatsappForward: "📲 WhatsApp Forward Detected — Treat with extra caution",
-    demoMode: "DEMO MODE — Pre-filled with real scam example"
+    demoMode: "DEMO MODE — Pre-filled with real scam example",
+    reportSectionTitle: "Report to Authorities",
+    generateReportBtn: "Copy Police Report Draft",
+    reportCopied: "Draft Copied!",
+    fileComplaintBtn: "File Official Complaint",
+    reportTemplate: "I am reporting a suspected cyber fraud attempt. Today, I received a message flagged as a [SCAM_TYPE]. The sender attempted to use the following tactics: [TACTICS]. The original message was: '[MESSAGE]'. I am reporting this proactively to prevent further circulation."
   },
   hi: {
     tagline: "भारत का स्कैम इंटरसेप्टर। सेकंडों में जानें कि क्या यह स्कैम है।",
@@ -71,7 +76,12 @@ export const translations = {
     aiEnglishNote: "AI प्रतिक्रिया अंग्रेजी में है — UI के लिए ऊपर भाषा चुनें",
     patternOnly: "केवल पैटर्न विश्लेषण · AI अनुपलब्ध",
     whatsappForward: "📲 व्हाट्सएप फॉरवर्ड पहचाना गया — अतिरिक्त सावधानी बरतें",
-    demoMode: "डेमो मोड — वास्तविक स्कैम उदाहरण के साथ पहले से भरा हुआ"
+    demoMode: "डेमो मोड — वास्तविक स्कैम उदाहरण के साथ पहले से भरा हुआ",
+    reportSectionTitle: "अधिकारियों को रिपोर्ट करें",
+    generateReportBtn: "पुलिस रिपोर्ट ड्राफ्ट कॉपी करें",
+    reportCopied: "ड्राफ्ट कॉपी किया गया!",
+    fileComplaintBtn: "आधिकारिक शिकायत दर्ज करें",
+    reportTemplate: "मैं एक संदिग्ध साइबर धोखाधड़ी के प्रयास की रिपोर्ट कर रहा हूँ। आज, मुझे एक संदेश मिला जिसे [SCAM_TYPE] के रूप में चिह्नित किया गया है। प्रेषक ने निम्नलिखित युक्तियों का उपयोग करने का प्रयास किया: [TACTICS]। मूल संदेश था: '[MESSAGE]'। मैं इसे आगे फैलने से रोकने के लिए सक्रिय रूप से रिपोर्ट कर रहा हूँ।"
   },
   mr: {
     tagline: "भारताचा स्कॅम इंटरसेप्टर. हे स्कॅम आहे का ते सेकंदात ओळखा.",
@@ -108,7 +118,12 @@ export const translations = {
     aiEnglishNote: "AI प्रतिसाद इंग्रजीमध्ये आहे — UI साठी वर भाषा निवडा",
     patternOnly: "केवळ पॅटर्न विश्लेषण · AI उपलब्ध नाही",
     whatsappForward: "📲 व्हॉट्सॲप फॉरवर्ड आढळले — अधिक खबरदारी घ्या",
-    demoMode: "डेमो मोड — वास्तविक स्कॅम उदाहरणासह आधीच भरलेले"
+    demoMode: "डेमो मोड — वास्तविक स्कॅम उदाहरणासह आधीच भरलेले",
+    reportSectionTitle: "अधिकाऱ्यांकडे तक्रार करा",
+    generateReportBtn: "पोलीस तक्रार मसुदा कॉपी करा",
+    reportCopied: "मसुदा कॉपी केला!",
+    fileComplaintBtn: "अधिकृत तक्रार नोंदवा",
+    reportTemplate: "मी एका संशयास्पद सायबर फसवणुकीच्या प्रयत्नाची तक्रार करत आहे. आज, मला [SCAM_TYPE] म्हणून चिन्हांकित केलेला संदेश प्राप्त झाला. पाठवणाऱ्याने खालील युक्त्या वापरण्याचा प्रयत्न केला: [TACTICS]. मूळ संदेश होता: '[MESSAGE]'. मी हे अधिक पसरू नये म्हणून सक्रियपणे तक्रार करत आहे."
   },
   bn: {
     tagline: "ভারতের স্ক্যাম ইন্টারসেপ্টর। এটি স্ক্যাম কিনা তা সেকেন্ডের মধ্যে জানুন।",
@@ -145,7 +160,12 @@ export const translations = {
     aiEnglishNote: "AI প্রতিক্রিয়া ইংরেজিতে — UI-এর জন্য উপরে ভাষা নির্বাচন করুন",
     patternOnly: "শুধুমাত্র প্যাটার্ন বিশ্লেষণ · AI অনুপলব্ধ",
     whatsappForward: "📲 হোয়াটসঅ্যাপ ফরোয়ার্ড শনাক্ত হয়েছে — অতিরিক্ত সতর্কতা অবলম্বন করুন",
-    demoMode: "ডেমো মোড — আসল স্ক্যাম উদাহরণ সহ আগে থেকে পূরণ করা"
+    demoMode: "ডেমো মোড — আসল স্ক্যাম উদাহরণ সহ আগে থেকে পূরণ করা",
+    reportSectionTitle: "কর্তৃপক্ষকে রিপোর্ট করুন",
+    generateReportBtn: "পুলিশ রিপোর্ট ড্রাফট কপি করুন",
+    reportCopied: "ড্রাফট কপি করা হয়েছে!",
+    fileComplaintBtn: "অফিসিয়াল অভিযোগ দায়ের করুন",
+    reportTemplate: "আমি একটি সন্দেহভাজন সাইবার জালিয়াতির প্রচেষ্টার রিপোর্ট করছি। আজ, আমি একটি বার্তা পেয়েছি যা [SCAM_TYPE] হিসাবে চিহ্নিত করা হয়েছে। প্রেরক নিম্নলিখিত কৌশলগুলি ব্যবহার করার চেষ্টা করেছেন: [TACTICS]। মূল বার্তাটি ছিল: '[MESSAGE]'। আমি এটি আরও ছড়িয়ে পড়া রোধ করতে সক্রিয়ভাবে রিপোর্ট করছি।"
   },
   ta: {
     tagline: "இந்தியாவின் ஸ்கேம் இன்டர்செப்டர். இது மோசடியா என்பதை நொடிகளில் தெரிந்துகொள்ளுங்கள்.",
@@ -182,7 +202,12 @@ export const translations = {
     aiEnglishNote: "AI பதில் ஆங்கிலத்தில் உள்ளது — UI க்காக மேலே மொழியைத் தேர்ந்தெடுக்கவும்",
     patternOnly: "வடிவம் சார்ந்த பகுப்பாய்வு மட்டும் · AI கிடைக்கவில்லை",
     whatsappForward: "📲 வாட்ஸ்அப் ஃபார்வர்டு கண்டறியப்பட்டது — கூடுதல் எச்சரிக்கையுடன் இருக்கவும்",
-    demoMode: "டெமோ பயன்முறை — உண்மையான மோசடி உதாரணத்துடன் முன்கூட்டியே நிரப்பப்பட்டது"
+    demoMode: "டெமோ பயன்முறை — உண்மையான மோசடி உதாரணத்துடன் முன்கூட்டியே நிரப்பப்பட்டது",
+    reportSectionTitle: "அதிகாரிகளிடம் புகாரளிக்கவும்",
+    generateReportBtn: "காவல்துறை புகார் வரைவை நகலெடுக்கவும்",
+    reportCopied: "வரைவு நகலெடுக்கப்பட்டது!",
+    fileComplaintBtn: "அதிகாரப்பூர்வ புகாரைப் பதிவு செய்யவும்",
+    reportTemplate: "சந்தேகத்திற்குரிய சைபர் மோசடி முயற்சி குறித்து நான் புகாரளிக்கிறேன். இன்று, எனக்கு [SCAM_TYPE] என அடையாளம் காணப்பட்ட ஒரு செய்தி வந்தது. அனுப்புநர் பின்வரும் உத்திகளைப் பயன்படுத்த முயன்றார்: [TACTICS]. அசல் செய்தி: '[MESSAGE]'. இது மேலும் பரவுவதைத் தடுக்க நான் முன்கூட்டியே புகாரளிக்கிறேன்."
   },
   te: {
     tagline: "భారతదేశపు స్కామ్ ఇంటర్‌సెప్టర్. ఇది స్కామ్ అని సెకన్లలో తెలుసుకోండి.",
@@ -219,7 +244,12 @@ export const translations = {
     aiEnglishNote: "AI ప్రతిస్పందన ఆంగ్లంలో ఉంది — UI కోసం పైన భాషను ఎంచుకోండి",
     patternOnly: "నమూనా-మాత్రమే విశ్లేషణ · AI అందుబాటులో లేదు",
     whatsappForward: "📲 వాట్సాప్ ఫార్వర్డ్ గుర్తించబడింది — అదనపు జాగ్రత్త వహించండి",
-    demoMode: "డెమో మోడ్ — నిజమైన స్కామ్ ఉదాహరణతో ముందే నింపబడింది"
+    demoMode: "డెమో మోడ్ — నిజమైన స్కామ్ ఉదాహరణతో ముందే నింపబడింది",
+    reportSectionTitle: "అధికారులకు ఫిర్యాదు చేయండి",
+    generateReportBtn: "పోలీస్ రిపోర్ట్ డ్రాఫ్ట్‌ను కాపీ చేయండి",
+    reportCopied: "డ్రాఫ్ట్ కాపీ చేయబడింది!",
+    fileComplaintBtn: "అధికారిక ఫిర్యాదు చేయండి",
+    reportTemplate: "నేను ఒక అనుమానాస్పద సైబర్ మోసం ప్రయత్నం గురించి ఫిర్యాదు చేస్తున్నాను. ఈ రోజు, నాకు [SCAM_TYPE]గా గుర్తించబడిన సందేశం వచ్చింది. పంపినవారు ఈ క్రింది ఎత్తుగడలను ఉపయోగించడానికి ప్రయత్నించారు: [TACTICS]. అసలు సందేశం: '[MESSAGE]'. ఇది మరింత వ్యాపించకుండా నిరోధించడానికి నేను ముందస్తుగా ఫిర్యాదు చేస్తున్నాను."
   }
 };
 

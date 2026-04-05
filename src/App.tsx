@@ -1,6 +1,6 @@
 import axios from "axios";
 import html2canvas from "html2canvas";
-import { AlertTriangle, ArrowLeft, CheckCircle, ChevronDown, ChevronUp, Download, ExternalLink, Globe, Info, Loader2, MessageSquare, MousePointer2, Shield, ShieldAlert, ShieldCheck, Upload, Zap } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle, ChevronDown, ChevronUp, Copy, Download, ExternalLink, FileText, Globe, Info, Loader2, MessageSquare, MousePointer2, Shield, ShieldAlert, ShieldCheck, Upload, Zap } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Tesseract from "tesseract.js";
@@ -137,6 +137,7 @@ export default function App() {
   const [pasteHint, setPasteHint] = useState<string | null>(null);
   const [isWhatsappForward, setIsWhatsappForward] = useState(false);
   const [analyzeStatus, setAnalyzeStatus] = useState<'idle' | 'loading'>('idle');
+  const [isReportCopied, setIsReportCopied] = useState(false);
 
   const t = translations[lang];
   const reportRef = useRef<HTMLDivElement>(null);
@@ -262,6 +263,20 @@ export default function App() {
       alert("Report card sharing is not supported on your current browser.");
     }
   };
+
+  const handleCopyReport = useCallback(() => {
+    if (!result) return;
+    
+    const template = t.reportTemplate
+      .replace("[SCAM_TYPE]", result.scam_type)
+      .replace("[TACTICS]", result.tactics_used.join(", "))
+      .replace("[MESSAGE]", inputText || "Image/Screenshot Analysis");
+
+    navigator.clipboard.writeText(template).then(() => {
+      setIsReportCopied(true);
+      setTimeout(() => setIsReportCopied(false), 2000);
+    });
+  }, [result, t.reportTemplate, inputText]);
 
   return (
     <div className="min-h-screen bg-bg text-white selection:bg-accent-red selection:text-white overflow-x-hidden" lang={lang}>
@@ -656,6 +671,48 @@ export default function App() {
                     ))}
                   </div>
                 </motion.div>
+
+                {/* Cybercell Reporting Module */}
+                {(result.risk_level === "HIGH_RISK" || result.risk_level === "CRITICAL") && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={isRevealVisible ? { opacity: 1, y: 0 } : {}}
+                    transition={{ duration: 0.5, delay: 0.75 }}
+                    className="backdrop-blur-[24px] bg-white/[0.03] border border-white/[0.08] rounded-3xl p-8 space-y-6 glass"
+                  >
+                    <div className="flex items-center gap-3 text-accent-red">
+                      <ShieldAlert className="w-6 h-6" />
+                      <h4 className="font-syne font-bold text-lg uppercase tracking-tight">{t.reportSectionTitle}</h4>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <button
+                        onClick={handleCopyReport}
+                        className="flex items-center justify-center gap-3 p-4 bg-white/10 hover:bg-white/20 rounded-xl border border-white/10 transition-all group"
+                      >
+                        {isReportCopied ? (
+                          <CheckCircle className="w-5 h-5 text-safe" />
+                        ) : (
+                          <Copy className="w-5 h-5 text-white/60 group-hover:text-white" />
+                        )}
+                        <span className="text-sm font-bold tracking-tight">
+                          {isReportCopied ? t.reportCopied : t.generateReportBtn}
+                        </span>
+                      </button>
+
+                      <a
+                        href="https://cybercrime.gov.in/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-3 p-4 bg-accent-red hover:bg-red-600 rounded-xl shadow-lg shadow-accent-red/20 transition-all group"
+                      >
+                        <FileText className="w-5 h-5 text-white" />
+                        <span className="text-sm font-bold tracking-tight">{t.fileComplaintBtn}</span>
+                        <ExternalLink className="w-4 h-4 opacity-40 group-hover:opacity-100 transition-opacity" />
+                      </a>
+                    </div>
+                  </motion.div>
+                )}
               </div>
 
               <footer className="text-center py-8">
