@@ -18,46 +18,7 @@ async function startServer() {
   app.use(cors());
   app.use(express.json());
 
-  // API Route for Google Safe Browsing
-  app.post("/api/check-url", async (req, res) => {
-    const { url } = req.body;
-    const apiKey = process.env.GOOGLE_SAFE_BROWSING_API_KEY;
-
-    if (!apiKey) {
-      return res.json({ safe: true, warning: "Safe Browsing API key not configured" });
-    }
-
-    try {
-      const payload = {
-        client: { clientId: "clearalert", clientVersion: "1.0" },
-        threatInfo: {
-          threatTypes: ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE", "POTENTIALLY_HARMFUL_APPLICATION"],
-          platformTypes: ["ANY_PLATFORM"],
-          threatEntryTypes: ["URL"],
-          threatEntries: [{ url }]
-        }
-      };
-
-      const response = await axios.post(
-        `https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${apiKey}`,
-        payload
-      );
-
-      if (response.data.matches) {
-        return res.json({ 
-          safe: false, 
-          threatType: response.data.matches[0].threatType 
-        });
-      }
-
-      return res.json({ safe: true });
-    } catch (error) {
-      console.error("Safe Browsing Error:", error);
-      return res.status(500).json({ error: "Failed to check URL" });
-    }
-  });
-
-  // API Route for URL Redirect Unrolling
+  // API Route for URL Redirect Unrolling and Safe Browsing
   app.post("/api/resolve-url", async (req, res) => {
     const { url } = req.body;
     let currentUrl = url;
@@ -66,26 +27,32 @@ async function startServer() {
     const maxRedirects = 5;
 
     try {
+      // Deep unrolling logic
       while (redirectCount < maxRedirects) {
-        const response = await axios.get(currentUrl, {
-          maxRedirects: 0,
-          validateStatus: (status) => status >= 200 && status < 400,
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-          }
-        });
+        try {
+          const response = await axios.get(currentUrl, {
+            maxRedirects: 0,
+            validateStatus: (status) => status >= 200 && status < 400,
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+          });
 
-        if (response.status >= 300 && response.status < 400 && response.headers.location) {
-          const nextUrl = new URL(response.headers.location, currentUrl).href;
-          currentUrl = nextUrl;
-          redirectChain.push(currentUrl);
-          redirectCount++;
-        } else {
+          if (response.status >= 300 && response.status < 400 && response.headers.location) {
+            const nextUrl = new URL(response.headers.location, currentUrl).href;
+            currentUrl = nextUrl;
+            redirectChain.push(currentUrl);
+            redirectCount++;
+          } else {
+            break;
+          }
+        } catch (e) {
+          // If we hit an error (like a 404 or connection error), stop unrolling
           break;
         }
       }
 
-      // Check the final URL against Safe Browsing
+      // Check the final destination URL against Google Safe Browsing API
       const apiKey = process.env.GOOGLE_SAFE_BROWSING_API_KEY;
       let isSafe = true;
       let threatType = null;
@@ -100,13 +67,18 @@ async function startServer() {
             threatEntries: [{ url: currentUrl }]
           }
         };
-        const sbResponse = await axios.post(
-          `https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${apiKey}`,
-          payload
-        );
-        if (sbResponse.data.matches) {
-          isSafe = false;
-          threatType = sbResponse.data.matches[0].threatType;
+        
+        try {
+          const sbResponse = await axios.post(
+            `https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${apiKey}`,
+            payload
+          );
+          if (sbResponse.data.matches) {
+            isSafe = false;
+            threatType = sbResponse.data.matches[0].threatType;
+          }
+        } catch (sbError) {
+          console.error("Safe Browsing API Error:", sbError);
         }
       }
 
@@ -114,7 +86,6 @@ async function startServer() {
         originalUrl: url,
         finalUrl: currentUrl,
         redirectCount,
-        redirectChain,
         isSafe,
         threatType
       });

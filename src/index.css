@@ -38,16 +38,15 @@
 
 @keyframes wave {
   0% { transform: translateX(0); }
-  50% { transform: translateX(-25%); }
-  100% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }
 
 .animate-wave {
-  animation: wave 10s linear infinite;
+  animation: wave 8s linear infinite;
 }
 
 .animate-wave-fast {
-  animation: wave 4s linear infinite;
+  animation: wave 2s linear infinite;
 }
 
 .glass {

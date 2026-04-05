@@ -1,58 +1,59 @@
 export interface IntentScores {
   urgencyScore: number;
-  financialPressureScore: number;
-  employmentFraudScore: number;
+  financialScore: number;
+  employmentScore: number;
   combined: number;
 }
 
 export function scoreIntent(text: string): IntentScores {
   const textLower = text.toLowerCase();
   
-  // Urgency signals
-  const urgencyKeywords = [
+  // Urgency signals (40% weight)
+  const urgencyWords = [
     "immediately", "24 hours", "blocked", "arrest warrant", "urgent", 
     "abhi", "turant", "band ho jayega", "suspended", "last chance",
     "within 1 hour", "final notice", "police case", "legal action"
   ];
   
-  // Financial/Data Pressure signals
-  const financialKeywords = [
+  // Financial/Data Pressure signals (40% weight)
+  const financialWords = [
     "otp", "upi pin", "transfer", "rupees", "₹", "fee", "charge",
     "payment", "bank details", "credit card", "cvv", "expiry date",
     "refund", "cashback", "reward", "lottery", "prize"
   ];
   
-  // Employment Fraud Traps
-  const employmentKeywords = [
+  // Employment Fraud Traps (20% weight)
+  const employmentWords = [
     "security deposit", "registration fee", "task completion", "offer letter fee",
     "laptop deposit", "id card fee", "training fee", "work from home",
     "youtube likes", "instagram likes", "daily payout", "telegram group"
   ];
 
   const calculateScore = (keywords: string[]) => {
-    let score = 0;
+    let count = 0;
     keywords.forEach(keyword => {
       if (textLower.includes(keyword)) {
-        score += 25; // Base score per keyword
+        count++;
       }
     });
-    return Math.min(score, 100);
+    // Scale count to 0-100 score
+    return Math.min(count * 25, 100);
   };
 
-  const urgencyScore = calculateScore(urgencyKeywords);
-  const financialPressureScore = calculateScore(financialKeywords);
-  const employmentFraudScore = calculateScore(employmentKeywords);
+  const urgencyScore = calculateScore(urgencyWords);
+  const financialScore = calculateScore(financialWords);
+  const employmentScore = calculateScore(employmentWords);
 
   // Combined score with weights
   const combined = Math.min(
-    (urgencyScore * 0.4) + (financialPressureScore * 0.3) + (employmentFraudScore * 0.3),
+    (urgencyScore * 0.4) + (financialScore * 0.4) + (employmentScore * 0.2),
     100
   );
 
   return {
     urgencyScore,
-    financialPressureScore,
-    employmentFraudScore,
+    financialScore,
+    employmentScore,
     combined
   };
 }

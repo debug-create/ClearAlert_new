@@ -3,33 +3,17 @@ import html2canvas from "html2canvas";
 import { AlertTriangle, ArrowLeft, CheckCircle, ChevronDown, ChevronUp, Download, ExternalLink, Globe, Info, Loader2, MessageSquare, MousePointer2, Shield, ShieldAlert, ShieldCheck, Upload, Zap } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Tesseract from "tesseract.js";
 import { Language, languages, translations } from "./lib/i18n";
 import { findPatternMatch, detectForwarded } from "./lib/patterns";
 import { recentScams } from "./lib/recentScams";
 import { analyzeSemantic } from "./lib/localAI";
-import { scoreIntent, IntentScores } from "./lib/intentScorer";
+import { scoreIntent } from "./lib/intentScorer";
+import { hybridAnalyze, AnalysisResult } from "./lib/aiRouter";
 
 type AppState = "input" | "loading" | "results";
 
-const MIN_LOADING_TIME = 2500;
-
-interface AnalysisResult {
-  risk_level: "SAFE" | "SUSPICIOUS" | "HIGH_RISK" | "CRITICAL";
-  scam_type: string;
-  confidence: number;
-  tactics_used: string[];
-  red_flags: string[];
-  plain_language_explanation: string;
-  action_checklist: string[];
-  intentScores?: IntentScores;
-  isWhatsappForward?: boolean;
-  urlInfo?: {
-    originalUrl: string;
-    finalUrl: string;
-    isSafe: boolean;
-    threatType: string | null;
-  };
-}
+const MIN_LOADING_TIME = 2800;
 
 // Custom Hook for Reveal on Scroll
 function useRevealOnScroll() {
@@ -68,17 +52,25 @@ function CursorGlow() {
 
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile('ontouchstart' in window || navigator.maxTouchPoints > 0);
+      const mobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || window.innerWidth < 768;
+      setIsMobile(mobile);
     };
     checkMobile();
+    window.addEventListener('resize', checkMobile);
 
     const handleMouseMove = (e: MouseEvent) => {
       if (isMobile) return;
       setPosition({ x: e.clientX, y: e.clientY });
     };
 
-    document.addEventListener("mousemove", handleMouseMove);
-    return () => document.removeEventListener("mousemove", handleMouseMove);
+    if (!isMobile) {
+      document.addEventListener("mousemove", handleMouseMove);
+    }
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+      document.removeEventListener("mousemove", handleMouseMove);
+    };
   }, [isMobile]);
 
   if (isMobile) return null;
@@ -97,10 +89,10 @@ function CursorGlow() {
 function LiquidWave({ riskLevel }: { riskLevel: string }) {
   const fillLevel = useMemo(() => {
     switch (riskLevel) {
-      case "SAFE": return "8%";
+      case "SAFE": return "10%";
       case "SUSPICIOUS": return "45%";
       case "HIGH_RISK": return "75%";
-      case "CRITICAL": return "95%";
+      case "CRITICAL": return "90%";
       default: return "0%";
     }
   }, [riskLevel]);
@@ -116,7 +108,7 @@ function LiquidWave({ riskLevel }: { riskLevel: string }) {
   }, [riskLevel]);
 
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-3xl">
       <div 
         className={`absolute bottom-0 left-0 w-[200%] h-full bg-accent-red transition-all duration-1000 ease-in-out ${waveClass}`}
         style={{ 
@@ -133,6 +125,7 @@ export default function App() {
   const [inputText, setInputText] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const [loadingStep, setLoadingStep] = useState(0);
+  const [loadingText, setLoadingText] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [lang, setLang] = useState<Language>(() => {
     const saved = localStorage.getItem("clearalert_lang");
@@ -143,7 +136,7 @@ export default function App() {
   const [isDemo, setIsDemo] = useState(false);
   const [pasteHint, setPasteHint] = useState<string | null>(null);
   const [isWhatsappForward, setIsWhatsappForward] = useState(false);
-  const [analyzeButtonState, setAnalyzeButtonState] = useState<'idle' | 'morphing' | 'loading' | 'done'>('idle');
+  const [analyzeStatus, setAnalyzeStatus] = useState<'idle' | 'loading'>('idle');
 
   const t = translations[lang];
   const reportRef = useRef<HTMLDivElement>(null);
@@ -202,118 +195,62 @@ export default function App() {
       return;
     }
 
-    setAnalyzeButtonState('morphing');
-    setTimeout(() => setAnalyzeButtonState('loading'), 300);
+    setAnalyzeStatus('loading');
     
-    // We'll set the app state to loading after the button morphs
-    setTimeout(() => {
-      setState("loading");
-      setLoadingStep(0);
-    }, 500);
-
-    const startTime = Date.now();
+    // Small delay to allow button morphing animation
+    await new Promise(r => setTimeout(r, 400));
+    
+    setState("loading");
+    setLoadingStep(0);
+    setLoadingText(image ? "Extracting text from image..." : t.loadingPatterns);
 
     try {
-      // Parallel execution of checks
-      const [semanticResult, intentResult, urlResult] = await Promise.all([
-        analyzeSemantic(inputText),
-        scoreIntent(inputText),
+      let combinedText = inputText;
+
+      // FEATURE 1: Client-Side OCR
+      if (image) {
+        const ocrResult = await Tesseract.recognize(image, 'eng');
+        combinedText = (combinedText + " " + ocrResult.data.text).trim();
+      }
+
+      setLoadingStep(1);
+      setLoadingText(t.loadingAI);
+
+      // Core Analysis Logic wrapped in Promise.all for minimum loading time (FIX 2)
+      const [analysisResult] = await Promise.all([
         (async () => {
-          const urlRegex = /(https?:\/\/[^\s]+)/g;
-          const urls = inputText.match(urlRegex);
-          if (urls && urls.length > 0) {
-            try {
-              const res = await axios.post("/api/resolve-url", { url: urls[0] });
-              return res.data;
-            } catch (e) {
-              console.warn("URL check failed", e);
-              return null;
-            }
-          }
-          return null;
+          // Local signals
+          const semantic = await analyzeSemantic(combinedText);
+          const intent = scoreIntent(combinedText);
+          
+          // Hybrid Router (FEATURE 4)
+          return await hybridAnalyze(combinedText, { semantic, intent });
         })(),
-        new Promise(r => setTimeout(r, MIN_LOADING_TIME)) // Minimum loading time
+        new Promise(res => setTimeout(res, MIN_LOADING_TIME))
       ]);
 
-      const patternMatch = findPatternMatch(inputText);
-      
-      // Merge all signals to determine final result
-      let risk_level: "SAFE" | "SUSPICIOUS" | "HIGH_RISK" | "CRITICAL" = "SAFE";
-      let scam_type = "Safe / Legitimate";
-      let confidence = 40;
-      const red_flags: string[] = [];
-      const tactics: string[] = [];
+      setLoadingStep(2);
+      setLoadingText(t.loadingURL);
 
-      if (patternMatch.matched && 'severity' in patternMatch) {
-        risk_level = patternMatch.severity as any;
-        scam_type = patternMatch.name;
-        confidence = 70;
-        red_flags.push("Matches known scam pattern database");
-      }
-
-      if (semanticResult.matched) {
-        if (risk_level === "SAFE") risk_level = "HIGH_RISK";
-        scam_type = semanticResult.closestMatch.split(".")[0]; // Use first sentence as type
-        confidence = Math.max(confidence, Math.round(semanticResult.similarity * 100));
-        red_flags.push("Semantic similarity to known scam templates detected");
-      }
-
-      if (intentResult.combined > 65) {
-        if (risk_level === "SAFE" || risk_level === "SUSPICIOUS") risk_level = "HIGH_RISK";
-        confidence = Math.max(confidence, intentResult.combined);
-        red_flags.push("High urgency and financial pressure detected in language");
-      }
-
-      if (urlResult && !urlResult.isSafe) {
-        risk_level = "CRITICAL";
-        scam_type = "Phishing / Malicious URL";
-        confidence = 95;
-        red_flags.push(`Malicious URL detected: ${urlResult.threatType}`);
-      }
-
-      if (isWhatsappForward) {
-        confidence = Math.min(confidence + 15, 100);
-        red_flags.push("Highly circulated message (WhatsApp Forward)");
-      }
-
-      // Final adjustment
-      if (confidence > 85 && risk_level !== "CRITICAL") risk_level = "HIGH_RISK";
-      if (confidence > 95) risk_level = "CRITICAL";
-
-      const finalResult: AnalysisResult = {
-        risk_level,
-        scam_type,
-        confidence,
-        tactics_used: tactics.length > 0 ? tactics : ["Social Engineering", "Urgency Manipulation"],
-        red_flags: red_flags.length > 0 ? red_flags : ["Unusual message structure"],
-        plain_language_explanation: semanticResult.matched 
-          ? `This message is very similar to a known scam: "${semanticResult.closestMatch}". It uses urgency and pressure to manipulate you.`
-          : "Our local AI has analyzed the intent and patterns of this message. It shows characteristics common in cybercrime attempts.",
-        action_checklist: ["Do not click any links", "Do not share OTP", "Report to 1930", "Block the sender"],
-        intentScores: intentResult,
-        isWhatsappForward,
-        urlInfo: urlResult
-      };
-
-      requestAnimationFrame(() => {
-        setResult(finalResult);
-        setState("results");
-        setAnalyzeButtonState('done');
-      });
+      setResult(analysisResult);
+      setState("results");
     } catch (error) {
-      console.error(error);
+      console.error("Analysis Error:", error);
       setState("input");
-      setAnalyzeButtonState('idle');
+      setAnalyzeStatus('idle');
       alert("Analysis failed. Please try again.");
     }
-  }, [inputText, image, t, lang, isWhatsappForward]);
+  }, [inputText, image, t]);
 
   const handleShare = async () => {
+    // FIX 3: html2canvas Safety
     try {
       if (reportRef.current) {
         const canvas = await html2canvas(reportRef.current, {
           backgroundColor: "#0A0A0A",
           scale: 2,
+          useCORS: true,
+          logging: false
         });
         const link = document.createElement("a");
         link.download = `ClearAlert-Report-${Date.now()}.png`;
@@ -322,7 +259,7 @@ export default function App() {
       }
     } catch (error) {
       console.error("Share failed:", error);
-      alert("Sharing is not supported on this browser.");
+      alert("Report card sharing is not supported on your current browser.");
     }
   };
 
@@ -436,16 +373,17 @@ export default function App() {
               </div>
 
               <div className="flex justify-center">
-                <button
+                <motion.button
+                  layout
                   onClick={handleAnalyze}
-                  disabled={(!inputText && !image) || analyzeButtonState !== 'idle'}
+                  disabled={(!inputText && !image) || analyzeStatus === 'loading'}
                   className={`relative font-syne font-black text-2xl tracking-tighter transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] flex items-center justify-center gap-3 overflow-hidden ${
-                    analyzeButtonState === 'idle' 
+                    analyzeStatus === 'idle' 
                       ? "w-full py-6 rounded-2xl bg-accent-red hover:bg-red-600 shadow-lg shadow-accent-red/20 active:scale-[0.98]" 
                       : "w-20 h-20 rounded-full bg-accent-red"
-                  } ${(!inputText && !image) && analyzeButtonState === 'idle' ? "opacity-20 cursor-not-allowed" : "opacity-100"}`}
+                  } ${(!inputText && !image) && analyzeStatus === 'idle' ? "opacity-20 cursor-not-allowed" : "opacity-100"}`}
                 >
-                  {analyzeButtonState === 'idle' ? (
+                  {analyzeStatus === 'idle' ? (
                     <>
                       <Zap className="w-6 h-6 fill-current" />
                       {t.analyzeNow}
@@ -453,7 +391,7 @@ export default function App() {
                   ) : (
                     <Loader2 className="w-8 h-8 animate-spin" />
                   )}
-                </button>
+                </motion.button>
               </div>
 
               {/* Proactive Panel */}
@@ -539,19 +477,30 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="space-y-6 w-full max-w-xs">
-                {[t.loadingPatterns, t.loadingAI, t.loadingURL].map((step, i) => (
-                  <div key={i} className="flex items-center gap-4">
-                    <div className={`w-2 h-2 rounded-full transition-colors duration-500 ${
-                      loadingStep > i ? "bg-safe" : loadingStep === i ? "bg-accent-red animate-pulse" : "bg-white/10"
-                    }`}></div>
-                    <span className={`text-sm font-mono tracking-tight transition-colors duration-500 ${
-                      loadingStep >= i ? "text-white" : "text-white/20"
-                    }`}>
-                      {step}
-                    </span>
-                  </div>
-                ))}
+              <div className="space-y-6 w-full max-w-xs text-center">
+                <motion.p 
+                  key={loadingText}
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-sm font-mono text-accent-red uppercase tracking-widest mb-4"
+                >
+                  {loadingText}
+                </motion.p>
+                
+                <div className="space-y-4">
+                  {[t.loadingPatterns, t.loadingAI, t.loadingURL].map((step, i) => (
+                    <div key={i} className="flex items-center gap-4">
+                      <div className={`w-2 h-2 rounded-full transition-colors duration-500 ${
+                        loadingStep > i ? "bg-safe" : loadingStep === i ? "bg-accent-red animate-pulse" : "bg-white/10"
+                      }`}></div>
+                      <span className={`text-sm font-mono tracking-tight transition-colors duration-500 ${
+                        loadingStep >= i ? "text-white" : "text-white/20"
+                      }`}>
+                        {step}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </motion.div>
           )}
@@ -567,7 +516,7 @@ export default function App() {
                 <button
                   onClick={() => {
                     setState("input");
-                    setAnalyzeButtonState('idle');
+                    setAnalyzeStatus('idle');
                   }}
                   className="flex items-center gap-2 text-xs font-mono text-white/40 hover:text-white transition-colors"
                 >
@@ -635,9 +584,9 @@ export default function App() {
                 {/* Details Grid */}
                 <div className="grid md:grid-cols-2 gap-6" ref={revealRef}>
                   <motion.div 
-                    initial={{ opacity: 0, y: 16 }}
+                    initial={{ opacity: 0, y: 20 }}
                     animate={isRevealVisible ? { opacity: 1, y: 0 } : {}}
-                    transition={{ duration: 0.5, delay: 0.1 }}
+                    transition={{ duration: 0.5, delay: 0.15 }}
                     className="bg-white/5 border border-white/10 p-6 rounded-2xl space-y-4 glass"
                   >
                     <div className="flex items-center gap-2 text-accent-gold">
@@ -645,14 +594,14 @@ export default function App() {
                       <h4 className="font-syne font-bold text-sm uppercase tracking-tight">{t.whatsHappening}</h4>
                     </div>
                     <p className="text-white/70 leading-relaxed text-sm">
-                      {result.plain_language_explanation}
+                      {result.explanation}
                     </p>
                   </motion.div>
 
                   <motion.div 
-                    initial={{ opacity: 0, y: 16 }}
+                    initial={{ opacity: 0, y: 20 }}
                     animate={isRevealVisible ? { opacity: 1, y: 0 } : {}}
-                    transition={{ duration: 0.5, delay: 0.2 }}
+                    transition={{ duration: 0.5, delay: 0.3 }}
                     className="bg-white/5 border border-white/10 p-6 rounded-2xl space-y-4 glass"
                   >
                     <div className="flex items-center gap-2 text-accent-red">
@@ -663,11 +612,11 @@ export default function App() {
                       {result.red_flags.map((flag, i) => (
                         <motion.span
                           key={i}
-                          initial={{ opacity: 0, scale: 0.85, y: 6 }}
+                          initial={{ opacity: 0, scale: 0.85, y: 10 }}
                           animate={isRevealVisible ? { opacity: 1, scale: 1, y: 0 } : {}}
                           transition={{ 
                             duration: 0.4, 
-                            delay: 0.3 + (i * 0.04),
+                            delay: 0.45 + (i * 0.05),
                             ease: [0.34, 1.56, 0.64, 1]
                           }}
                           className="px-3 py-1 bg-accent-red/10 border border-accent-red/20 rounded-full text-[10px] text-accent-red font-bold"
@@ -681,9 +630,9 @@ export default function App() {
 
                 {/* Action Checklist */}
                 <motion.div 
-                  initial={{ opacity: 0, y: 16 }}
+                  initial={{ opacity: 0, y: 20 }}
                   animate={isRevealVisible ? { opacity: 1, y: 0 } : {}}
-                  transition={{ duration: 0.5, delay: 0.3 }}
+                  transition={{ duration: 0.5, delay: 0.45 }}
                   className="bg-white/5 border border-white/10 p-8 rounded-3xl space-y-6 glass"
                 >
                   <div className="flex items-center gap-2 text-safe">
@@ -696,7 +645,7 @@ export default function App() {
                         key={i}
                         initial={{ opacity: 0, x: -10 }}
                         animate={isRevealVisible ? { opacity: 1, x: 0 } : {}}
-                        transition={{ duration: 0.3, delay: 0.4 + (i * 0.08) }}
+                        transition={{ duration: 0.3, delay: 0.6 + (i * 0.1) }}
                         className="flex items-center gap-4 p-4 bg-white/5 rounded-xl border border-white/5"
                       >
                         <div className="w-6 h-6 rounded-full bg-safe/20 flex items-center justify-center shrink-0">
